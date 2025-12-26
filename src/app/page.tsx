@@ -2,6 +2,17 @@
 import { Sparkles, Heart, Eye } from "lucide-react";
 import { useState } from "react";
 
+interface Tweet {
+  id: string;
+  text: string;
+  public_metrics: {
+    like_count: number;
+    retweet_count: number;
+    quote_count: number;
+    reply_count: number;
+  };
+}
+
 export default function Home() {
   const [spotifyUsername, setSpotifyUsername] = useState("");
   const [xUsername, setXUsername] = useState("");
@@ -28,34 +39,52 @@ export default function Home() {
     }
 
     if (cleanX) {
-      // Fetch top engaged tweets (past year)
       try {
-        const bearerToken = process.env.TWITTER_BEARER_TOKEN; // From .env.local
-        const userRes = await fetch(`https://api.twitter.com/2/users/by/username/${cleanX}`, {
-          headers: { Authorization: `Bearer ${bearerToken}` },
+        // Get user ID
+        const userRes = await fetch(`https://api.twitter.com/2/users/by/username/${cleanX}?user.fields=id`, {
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_TWITTER_BEARER_TOKEN}`, // Use public env var
+          },
         });
         const userData = await userRes.json();
+        if (!userData.data) throw new Error("User not found");
+
         const userId = userData.data.id;
 
-        const tweetsRes = await fetch(`https://api.twitter.com/2/users/${userId}/tweets?max_results=100&start_time=2024-01-01T00:00:00Z&tweet.fields=public_metrics`, {
-          headers: { Authorization: `Bearer ${bearerToken}` },
-        });
+        // Get tweets from past year
+        const tweetsRes = await fetch(
+          `https://api.twitter.com/2/users/${userId}/tweets?max_results=100&tweet.fields=public_metrics&start_time=2025-01-01T00:00:00Z`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NEXT_PUBLIC_TWITTER_BEARER_TOKEN}`,
+            },
+          }
+        );
         const tweetsData = await tweetsRes.json();
 
-        // Sort by engagement (likes + retweets + quotes)
-        const topTweets = tweetsData.data
-          .sort((a, b) => {
+        if (!tweetsData.data || tweetsData.data.length === 0) {
+          alert("No public tweets found for this user in 2025");
+          return;
+        }
+
+        // Sort by engagement with explicit types
+        const topTweets: Tweet[] = tweetsData.data
+          .sort((a: Tweet, b: Tweet) => {
             const aEng = a.public_metrics.like_count + a.public_metrics.retweet_count + a.public_metrics.quote_count;
             const bEng = b.public_metrics.like_count + b.public_metrics.retweet_count + b.public_metrics.quote_count;
             return bEng - aEng;
           })
-          .slice(0, 5); // Top 5
+          .slice(0, 5);
 
-        // Generate card images using Postel.app (free URL-based)
-        const cards = topTweets.map(tweet => `https://www.postel.app/api/tweet/screenshot?url=https://x.com/${cleanX}/status/${tweet.id}&theme=dark`);
+        // Generate card images using Postel.app (free, instant)
+        const cards = topTweets.map(
+          (tweet) => `https://www.postel.app/api/tweet/screenshot?url=https://x.com/${cleanX}/status/${tweet.id}&theme=dark`
+        );
+
         setTweetCards(cards);
       } catch (error) {
-        alert("Error fetching X data — check username or API token!");
+        alert("Error fetching X data — check username or try again later.");
+        console.error(error);
       }
     }
   };
@@ -73,7 +102,7 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex items-center justify-center px-4">
         <div className="text-center space-y-12 max-w-5xl">
           <h1 className="text-7xl md:text-9xl font-black tracking-tight">6 Past Time</h1>
-          <p className="text-2xl md:text-4xl opacity-90">Instant real visuals from your decade — free preview</p>
+          <p className="text-2xl md:text-4xl opacity-90">Instant real visuals from your accounts — free preview</p>
 
           <div className="space-y-8 mt-12">
             <div>
@@ -105,7 +134,7 @@ export default function Home() {
             </button>
           </div>
 
-          {(receiptifyImg || tweetCards.length) && (
+          {(receiptifyImg || tweetCards.length > 0) && (
             <div className="mt-12 space-y-12 max-w-4xl mx-auto">
               <p className="text-3xl font-bold">Your Real Decade Preview 🔥</p>
 
@@ -118,16 +147,16 @@ export default function Home() {
 
               {tweetCards.length > 0 && (
                 <div className="space-y-4">
-                  <p className="text-xl">Your Top Engaged Tweets (past year):</p>
+                  <p className="text-xl">Your Top 5 Engaged Tweets (2025):</p>
                   {tweetCards.map((card, i) => (
-                    <img key={i} src={card} alt={`Top tweet ${i+1}`} className="mx-auto rounded-2xl shadow-2xl max-w-full border-4 border-white" />
+                    <img key={i} src={card} alt={`Top tweet ${i + 1}`} className="mx-auto rounded-2xl shadow-2xl max-w-full border-4 border-white" />
                   ))}
                 </div>
               )}
 
               <p className="text-xl mt-8">
-                All from your real data!<br/>
-                Premium unlocks full PDF bundle + more visuals.
+                All real data from your accounts!<br/>
+                Premium unlocks full custom PDF + more.
               </p>
             </div>
           )}
