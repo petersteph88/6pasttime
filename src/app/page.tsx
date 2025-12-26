@@ -7,10 +7,9 @@ export default function Home() {
   const [xUsername, setXUsername] = useState("");
   const [receiptifyImg, setReceiptifyImg] = useState("");
   const [statsUrl, setStatsUrl] = useState("");
-  const [wingAzulUrl, setWingAzulUrl] = useState("");
-  const [exampleTweetCard, setExampleTweetCard] = useState("");
+  const [tweetCards, setTweetCards] = useState<string[]>([]);
 
-  const generatePreview = () => {
+  const generatePreview = async () => {
     const cleanSpotify = spotifyUsername.trim();
     const cleanX = xUsername.replace("@", "").trim();
 
@@ -21,8 +20,7 @@ export default function Home() {
 
     setReceiptifyImg("");
     setStatsUrl("");
-    setWingAzulUrl("");
-    setExampleTweetCard("");
+    setTweetCards([]);
 
     if (cleanSpotify) {
       setReceiptifyImg(`https://receiptify.herokuapp.com/receipt/${cleanSpotify}/alltime/top10.png`);
@@ -30,9 +28,35 @@ export default function Home() {
     }
 
     if (cleanX) {
-      setWingAzulUrl(`https://wingazul.com/sort-tweets?username=${cleanX}`);
-      // Example top tweet card (replace with real if user pastes tweet URL later)
-      setExampleTweetCard("https://orshot.com/api/tweet-image?url=https://x.com/elonmusk/status/example"); // Placeholder
+      // Fetch top engaged tweets (past year)
+      try {
+        const bearerToken = process.env.TWITTER_BEARER_TOKEN; // From .env.local
+        const userRes = await fetch(`https://api.twitter.com/2/users/by/username/${cleanX}`, {
+          headers: { Authorization: `Bearer ${bearerToken}` },
+        });
+        const userData = await userRes.json();
+        const userId = userData.data.id;
+
+        const tweetsRes = await fetch(`https://api.twitter.com/2/users/${userId}/tweets?max_results=100&start_time=2024-01-01T00:00:00Z&tweet.fields=public_metrics`, {
+          headers: { Authorization: `Bearer ${bearerToken}` },
+        });
+        const tweetsData = await tweetsRes.json();
+
+        // Sort by engagement (likes + retweets + quotes)
+        const topTweets = tweetsData.data
+          .sort((a, b) => {
+            const aEng = a.public_metrics.like_count + a.public_metrics.retweet_count + a.public_metrics.quote_count;
+            const bEng = b.public_metrics.like_count + b.public_metrics.retweet_count + b.public_metrics.quote_count;
+            return bEng - aEng;
+          })
+          .slice(0, 5); // Top 5
+
+        // Generate card images using Postel.app (free URL-based)
+        const cards = topTweets.map(tweet => `https://www.postel.app/api/tweet/screenshot?url=https://x.com/${cleanX}/status/${tweet.id}&theme=dark`);
+        setTweetCards(cards);
+      } catch (error) {
+        alert("Error fetching X data — check username or API token!");
+      }
     }
   };
 
@@ -49,7 +73,7 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex items-center justify-center px-4">
         <div className="text-center space-y-12 max-w-5xl">
           <h1 className="text-7xl md:text-9xl font-black tracking-tight">6 Past Time</h1>
-          <p className="text-2xl md:text-4xl opacity-90">Instant real visuals from your accounts — free preview</p>
+          <p className="text-2xl md:text-4xl opacity-90">Instant real visuals from your decade — free preview</p>
 
           <div className="space-y-8 mt-12">
             <div>
@@ -60,6 +84,7 @@ export default function Home() {
                 onChange={(e) => setSpotifyUsername(e.target.value)}
                 className="w-full max-w-md px-8 py-6 text-2xl text-black rounded-2xl"
               />
+              <p className="text-gray-400 text-sm mt-2">Spotify → Profile → Share → Copy link → last part after /user/</p>
             </div>
 
             <div>
@@ -80,36 +105,29 @@ export default function Home() {
             </button>
           </div>
 
-          {(receiptifyImg || statsUrl || wingAzulUrl) && (
+          {(receiptifyImg || tweetCards.length) && (
             <div className="mt-12 space-y-12 max-w-4xl mx-auto">
               <p className="text-3xl font-bold">Your Real Decade Preview 🔥</p>
 
               {receiptifyImg && (
                 <div className="space-y-4">
-                  <p className="text-xl">Your Spotify Top Tracks Receipt:</p>
+                  <p className="text-xl">Spotify Top Tracks Receipt:</p>
                   <img src={receiptifyImg} alt="Top tracks" className="mx-auto rounded-2xl shadow-2xl max-w-full border-4 border-white" />
                 </div>
               )}
 
-              {statsUrl && (
-                <a href={statsUrl} target="_blank" className="block text-xl underline hover:text-pink-300">
-                  Open Your Full Spotify Stats
-                </a>
-              )}
-
-              {wingAzulUrl && (
+              {tweetCards.length > 0 && (
                 <div className="space-y-4">
                   <p className="text-xl">Your Top Engaged Tweets (past year):</p>
-                  <a href={wingAzulUrl} target="_blank" className="block text-lg underline hover:text-pink-300">
-                    Open WingAzul — see most liked/retweeted tweets
-                  </a>
-                  <p className="text-lg">Copy any tweet URL → use free tool for beautiful card image</p>
+                  {tweetCards.map((card, i) => (
+                    <img key={i} src={card} alt={`Top tweet ${i+1}`} className="mx-auto rounded-2xl shadow-2xl max-w-full border-4 border-white" />
+                  ))}
                 </div>
               )}
 
               <p className="text-xl mt-8">
-                Real data from your accounts!<br/>
-                Premium = custom PDF bundle + more visuals ($1/$5)
+                All from your real data!<br/>
+                Premium unlocks full PDF bundle + more visuals.
               </p>
             </div>
           )}
@@ -123,6 +141,8 @@ export default function Home() {
               <Heart className="inline mr-4" size={48} /> $5 – Ultimate Edition
             </button>
           </div>
+
+          <p className="text-xl opacity-70 mt-16">Global payments • Instant • Live now!</p>
         </div>
       </div>
     </>
