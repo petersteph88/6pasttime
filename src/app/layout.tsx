@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { SessionProvider } from "next-auth/react";
+import NextAuthSessionProvider from "@/components/SessionProvider";
 
 export const metadata: Metadata = {
-  title: "6 Past Time - Decade Memoirs",
-  description: "Your X decade wrapped",
+  title: "6 Past Time",
+  description: "Your decade wrapped",
 };
 
 export default function RootLayout({
@@ -15,9 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <SessionProvider>
+        <NextAuthSessionProvider>
           {children}
-        </SessionProvider>
+        </NextAuthSessionProvider>
       </body>
     </html>
   );
