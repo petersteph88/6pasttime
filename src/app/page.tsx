@@ -3,9 +3,6 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { Sparkles, Heart } from "lucide-react";
 import { useState } from "react";
 
-// Force dynamic rendering (no static prerender — needed for auth + API)
-export const dynamic = "force-dynamic";
-
 export default function Home() {
   const { data: session, status } = useSession();
   const [tweetCards, setTweetCards] = useState<string[]>([]);
@@ -17,7 +14,7 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/top-tweets");
-      if (!res.ok) throw new Error("Failed to fetch");
+      if (!res.ok) throw new Error();
       const data = await res.json();
 
       if (data.tweets && data.tweets.length > 0) {
@@ -26,7 +23,7 @@ export default function Home() {
         );
         setTweetCards(cards);
       } else {
-        alert("No tweets found in 2025 — try posting more! 😄");
+        alert("No tweets found in 2025 — post more! 😄");
       }
     } catch (err) {
       alert("Error loading tweets — try again");
@@ -38,13 +35,13 @@ export default function Home() {
   const pay1Dollar = () => window.location.href = "https://nowpayments.io/payment/?iid=6024323253";
   const pay5Dollar = () => window.location.href = "YOUR_5_DOLLAR_LINK_HERE";
 
+  if (status === "loading") return <p className="text-center text-2xl mt-40">Loading...</p>;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex items-center justify-center px-4">
       <div className="text-center space-y-12 max-w-5xl">
         <h1 className="text-7xl md:text-9xl font-black tracking-tight">6 Past Time</h1>
         <p className="text-2xl md:text-4xl opacity-90">Your X decade wrapped — real tweet visuals</p>
-
-        {status === "loading" && <p>Loading...</p>}
 
         {!session ? (
           <button
@@ -89,8 +86,6 @@ export default function Home() {
             <Heart className="inline mr-4" size={48} /> $5 – Ultimate Edition
           </button>
         </div>
-
-        <p className="text-xl opacity-70 mt-16">Global payments • Instant • Live now!</p>
       </div>
     </div>
   );
