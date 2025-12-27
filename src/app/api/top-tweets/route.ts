@@ -15,22 +15,25 @@ export async function GET() {
       },
     });
 
+    if (!res.ok) throw new Error("Failed to fetch tweets");
+
     const data = await res.json();
 
-    if (data.data) {
-      const topTweets = data.data
-        .sort((a: any, b: any) => {
-          const aEng = a.public_metrics.like_count + a.public_metrics.retweet_count + a.public_metrics.quote_count;
-          const bEng = b.public_metrics.like_count + b.public_metrics.retweet_count + b.public_metrics.quote_count;
-          return bEng - aEng;
-        })
-        .slice(0, 5);
-
-      return Response.json({ tweets: topTweets });
+    if (!data.data || data.data.length === 0) {
+      return Response.json({ error: "No tweets found in 2025" });
     }
 
-    return Response.json({ error: "No tweets found" });
+    const topTweets = data.data
+      .sort((a: any, b: any) => {
+        const aEng = a.public_metrics.like_count + a.public_metrics.retweet_count + a.public_metrics.quote_count;
+        const bEng = b.public_metrics.like_count + b.public_metrics.retweet_count + b.public_metrics.quote_count;
+        return bEng - aEng;
+      })
+      .slice(0, 5);
+
+    return Response.json({ tweets: topTweets });
   } catch (error) {
-    return Response.json({ error: "Failed to fetch tweets" });
+    console.error(error);
+    return Response.json({ error: "Failed to fetch tweets — try again later" });
   }
 }
