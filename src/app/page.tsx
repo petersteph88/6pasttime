@@ -3,8 +3,11 @@ import { signIn, signOut, useSession } from "next-auth/react";
 import { Sparkles, Heart } from "lucide-react";
 import { useState } from "react";
 
+// Force dynamic rendering (no static prerender — needed for auth + API)
+export const dynamic = "force-dynamic";
+
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [tweetCards, setTweetCards] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -14,31 +17,34 @@ export default function Home() {
 
     try {
       const res = await fetch("/api/top-tweets");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
 
-      if (data.tweets) {
+      if (data.tweets && data.tweets.length > 0) {
         const cards = data.tweets.map((tweet: any) => 
           `https://www.postel.app/api/tweet/screenshot?url=https://x.com/i/status/${tweet.id}&theme=dark`
         );
         setTweetCards(cards);
       } else {
-        alert(data.error || "No tweets found");
+        alert("No tweets found in 2025 — try posting more! 😄");
       }
     } catch (err) {
-      alert("Error loading tweets");
+      alert("Error loading tweets — try again");
     }
 
     setLoading(false);
   };
 
   const pay1Dollar = () => window.location.href = "https://nowpayments.io/payment/?iid=6024323253";
-  const pay5Dollar = () => window.location.href = "https://nowpayments.io/payment/?iid=4808621061";
+  const pay5Dollar = () => window.location.href = "YOUR_5_DOLLAR_LINK_HERE";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 text-white flex items-center justify-center px-4">
       <div className="text-center space-y-12 max-w-5xl">
         <h1 className="text-7xl md:text-9xl font-black tracking-tight">6 Past Time</h1>
-        <p className="text-2xl md:text-4xl opacity-90">Your X decade wrapped — real visuals from your tweets</p>
+        <p className="text-2xl md:text-4xl opacity-90">Your X decade wrapped — real tweet visuals</p>
+
+        {status === "loading" && <p>Loading...</p>}
 
         {!session ? (
           <button
@@ -63,7 +69,7 @@ export default function Home() {
 
         {tweetCards.length > 0 && (
           <div className="mt-12 space-y-12 max-w-4xl mx-auto">
-            <p className="text-3xl font-bold">Your Top Engaged Tweets 🔥</p>
+            <p className="text-3xl font-bold">Your Top Engaged Tweets (2025) 🔥</p>
             {tweetCards.map((card, i) => (
               <img key={i} src={card} alt={`Top tweet ${i+1}`} className="mx-auto rounded-2xl shadow-2xl max-w-full border-4 border-white" />
             ))}
@@ -83,6 +89,8 @@ export default function Home() {
             <Heart className="inline mr-4" size={48} /> $5 – Ultimate Edition
           </button>
         </div>
+
+        <p className="text-xl opacity-70 mt-16">Global payments • Instant • Live now!</p>
       </div>
     </div>
   );
