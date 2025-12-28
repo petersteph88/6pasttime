@@ -1,18 +1,43 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import OAuth from "oauth-1.0a";
+import crypto from "crypto";
+import fetch from "node-fetch";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
 
-  if (!session || !session.accessToken) {
+  if (!session || !session.accessToken || !session.accessTokenSecret) {
     return Response.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {
-    const res = await fetch("https://api.twitter.com/2/users/me/tweets?max_results=100&tweet.fields=public_metrics&start_time=2025-01-01T00:00:00Z", {
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+    const oauth = new OAuth({
+      consumer: {
+        key: process.env.TWITTER_CONSUMER_KEY!,
+        secret: process.env.TWITTER_CONSUMER_SECRET!,
       },
+      signature_method: "HMAC-SHA1",
+      hash_function(base_string, key) {
+        return crypto.createHmac("sha1", key).update(base_string).digest("base64");
+      },
+    });
+
+    const token = {
+      key: session.accessToken,
+      secret: session.accessTokenSecret,
+    };
+
+    const requestData = {
+      url: "https://api.twitter.com/2/users/me/tweets?max_results=100&tweet.fields=public_metrics&start_time=2025-01-01T00:00:00Z",
+      method: "GET",
+    };
+
+    const headers = oauth.toHeader(oauth.authorize(requestData, token));
+
+    const res = await fetch(requestData.url, {
+      method: requestData.method,
+      headers: headers as any,
     });
 
     if (!res.ok) throw new Error("Failed to fetch tweets");

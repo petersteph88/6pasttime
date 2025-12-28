@@ -4,21 +4,23 @@ import TwitterProvider from "next-auth/providers/twitter";
 export const authOptions = {
   providers: [
     TwitterProvider({
-      clientId: process.env.TWITTER_CLIENT_ID!,
-      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-      // Remove version: "2.0" to use stable OAuth 1.0
+      consumerKey: process.env.TWITTER_CONSUMER_KEY!,
+      consumerSecret: process.env.TWITTER_CONSUMER_SECRET!,
+      // No version specified = OAuth 1.0A
       authorization: { params: { scope: "tweet.read users.read offline.access" } },
     }),
   ],
   callbacks: {
     async jwt({ token, account }: any) {
       if (account) {
-        token.accessToken = account.access_token;
+        token.accessToken = account.oauth_token;
+        token.accessTokenSecret = account.oauth_token_secret;
       }
       return token;
     },
     async session({ session, token }: any) {
       session.accessToken = token.accessToken;
+      session.accessTokenSecret = token.accessTokenSecret;
       return session;
     },
   },
