@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import OAuth from "oauth-1.0a";
 import crypto from "crypto";
-import fetch from "node-fetch";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -37,10 +36,13 @@ export async function GET() {
 
     const res = await fetch(requestData.url, {
       method: requestData.method,
-      headers: headers as any,
+      headers: headers as HeadersInit,
     });
 
-    if (!res.ok) throw new Error("Failed to fetch tweets");
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Twitter API error: ${errorText}`);
+    }
 
     const data = await res.json();
 
@@ -59,6 +61,6 @@ export async function GET() {
     return Response.json({ tweets: topTweets });
   } catch (error) {
     console.error(error);
-    return Response.json({ error: "Failed to fetch tweets — try again later" });
+    return Response.json({ error: "Failed to fetch tweets" });
   }
 }
