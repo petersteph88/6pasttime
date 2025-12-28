@@ -34,9 +34,13 @@ export async function GET() {
 
     const authHeader = oauth.toHeader(oauth.authorize(requestData, token));
 
+    const headers: Record<string, string> = {
+      Authorization: authHeader.Authorization, // Extract string
+    };
+
     const res = await fetch(requestData.url, {
       method: requestData.method,
-      headers: authHeader as unknown as HeadersInit, // Fixed type cast
+      headers,
     });
 
     if (!res.ok) {
