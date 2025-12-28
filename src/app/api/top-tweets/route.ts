@@ -32,11 +32,11 @@ export async function GET() {
       method: "GET",
     };
 
-    const headers = oauth.toHeader(oauth.authorize(requestData, token));
+    const authHeader = oauth.toHeader(oauth.authorize(requestData, token));
 
     const res = await fetch(requestData.url, {
       method: requestData.method,
-      headers: headers as HeadersInit,
+      headers: authHeader as unknown as HeadersInit, // Fixed type cast
     });
 
     if (!res.ok) {
